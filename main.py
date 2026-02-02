@@ -1,6 +1,5 @@
 import argparse
-import torch
-from transformers import pipeline, BitsAndBytesConfig
+from transformers import pipeline
 
 
 # IDE에서 디버깅할 때 사용할 기본 프롬프트
@@ -35,46 +34,17 @@ def main():
         default=None,
         help="샘플링 온도 (선택사항)"
     )
-    parser.add_argument(
-        "--quantization",
-        type=str,
-        choices=["4bit", "8bit", "none"],
-        default="4bit",
-        help="양자화 방식: 4bit (메모리 최소), 8bit (균형), none (원본) (기본값: 4bit)"
-    )
-
     args = parser.parse_args()
 
-    # 양자화 설정
-    model_kwargs = {}
-    if args.quantization == "4bit":
-        print("4비트 양자화 모드 (메모리 최소화)")
-        quantization_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.float16,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4"
-        )
-        model_kwargs["quantization_config"] = quantization_config
-        model_kwargs["device_map"] = "auto"
-    elif args.quantization == "8bit":
-        print("8비트 양자화 모드 (메모리와 품질 균형)")
-        quantization_config = BitsAndBytesConfig(
-            load_in_8bit=True
-        )
-        model_kwargs["quantization_config"] = quantization_config
-        model_kwargs["device_map"] = "auto"
-    else:
-        print("원본 정밀도 모드")
-        model_kwargs["torch_dtype"] = "auto"
-        model_kwargs["device_map"] = "auto"
-
     # 파이프라인 초기화
+    # 참고: openai/gpt-oss-20b는 이미 Mxfp4 양자화가 적용된 모델입니다
     print(f"모델 로딩 중: {args.model}...")
+    print("(이 모델은 이미 Mxfp4 양자화가 적용되어 메모리 효율적입니다)")
     pipe = pipeline(
         "text-generation",
         model=args.model,
-        **model_kwargs
+        torch_dtype="auto",
+        device_map="auto",
     )
 
     # 메시지 준비
